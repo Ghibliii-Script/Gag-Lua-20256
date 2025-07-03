@@ -7,6 +7,7 @@ local pets = {
 	["Queen Bee"] = "rbxassetid://14861897800",
 }
 
+-- GUI
 local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 gui.Name = "PetSpawner"
 gui.ResetOnSpawn = false
@@ -35,11 +36,10 @@ spawnButton.BackgroundColor3 = Color3.fromRGB(80, 200, 120)
 local selectedPet = nil
 local cooldown = false
 local cooldownTime = 60
-
--- Dropdown logic
 local dropdownOpen = false
 local petOptions = {}
 
+-- Dropdown logic
 dropdown.MouseButton1Click:Connect(function()
 	if dropdownOpen then
 		for _, opt in pairs(petOptions) do opt:Destroy() end
@@ -68,7 +68,7 @@ dropdown.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Spawn + Follow Logic
+-- Pet follow code
 local function spawnPet(name)
 	local id = pets[name]
 	local pet = Instance.new("Part", workspace)
@@ -86,39 +86,42 @@ local function spawnPet(name)
 	mesh.TextureId = id
 	mesh.Scale = Vector3.new(2, 2, 2)
 
-	local follow = game:GetService("RunService").Heartbeat:Connect(function()
+	local run = game:GetService("RunService")
+	local followConn
+
+	followConn = run.Heartbeat:Connect(function()
 		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-			local target = player.Character.HumanoidRootPart.Position + Vector3.new(2, 0, 2)
-			pet.Position = pet.Position:Lerp(target, 0.15)
+			local root = player.Character.HumanoidRootPart
+			local targetPos = root.Position + Vector3.new(2, 0, 2)
+			pet.Position = pet.Position:Lerp(targetPos, 0.15)
 		end
 	end)
 
 	player.CharacterRemoving:Connect(function()
-		follow:Disconnect()
+		if followConn then followConn:Disconnect() end
 		pet:Destroy()
 	end)
 end
 
--- Cooldown Function
-local function startCooldown()
-	cooldown = true
-	for i = cooldownTime, 1, -1 do
-		spawnButton.Text = "⏳ " .. i .. " SECONDS"
-		task.wait(1)
-	end
-	spawnButton.Text = "🧸 Spawn Selected Pet"
-	cooldown = false
-end
-
--- On Click
+-- Cooldown w/ countdown
 spawnButton.MouseButton1Click:Connect(function()
 	if cooldown then return end
+
 	if not selectedPet then
 		spawnButton.Text = "❌ Select a Pet!"
 		task.wait(2)
 		spawnButton.Text = "🧸 Spawn Selected Pet"
 		return
 	end
+
+	cooldown = true
 	spawnPet(selectedPet)
-	startCooldown()
+
+	for i = cooldownTime, 1, -1 do
+		spawnButton.Text = "⏳ " .. i .. " SECONDS"
+		task.wait(1)
+	end
+
+	spawnButton.Text = "🧸 Spawn Selected Pet"
+	cooldown = false
 end)
